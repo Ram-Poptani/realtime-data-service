@@ -18,10 +18,9 @@ spring:
 
 rabbit-mq:
     default:
-        exchange: binance.webconsumer.exchange
+        exchange: binance.trade.exchange
     consumer:
-        queue: binance.webconsumer.queue
-        routing-key: trade.key
+        queue: binance.live.queue
 
 websocket:
     allowed-origins: "*"
