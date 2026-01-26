@@ -1,5 +1,8 @@
 debug: false
 
+server:
+    port: 8081
+
 spring:
     application:
         name: LiveData
@@ -19,3 +22,6 @@ rabbit-mq:
     consumer:
         queue: binance.webconsumer.queue
         routing-key: trade.key
+
+websocket:
+    allowed-origins: "*"
