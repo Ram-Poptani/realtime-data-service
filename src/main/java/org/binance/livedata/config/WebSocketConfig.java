@@ -23,8 +23,8 @@ public class WebSocketConfig implements WebSocketConfigurer {
     @Override
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry.addHandler(
-                this.liveDataSocketHandler,
-        "ws/live"
+            this.liveDataSocketHandler,
+            "ws/live@*"
         ).setAllowedOrigins(allowedOrigins.split(","));
     }
 }

@@ -22,7 +22,6 @@ public class DataListener {
     @Transactional
     @RabbitListener(queues = "${rabbit-mq.consumer.queue}")
     public void storeData(String data) {
-        log.info("This never called");
         try {
             liveDataSocketHandler.broadcastMessage(data);
         } catch (Exception e) {
