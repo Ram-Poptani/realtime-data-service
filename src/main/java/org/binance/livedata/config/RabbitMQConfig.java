@@ -17,7 +17,7 @@ public class RabbitMQConfig {
     @Value("${rabbit-mq.default.exchange}")
     private String exchange;
 
-    @Value("${rabbit-mq.live.queue}")
+    @Value("${rabbit-mq.consumer.queue}")
     private String queue;
 
     @Bean
