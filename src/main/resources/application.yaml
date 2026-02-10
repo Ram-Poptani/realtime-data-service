@@ -24,3 +24,22 @@ rabbit-mq:
 
 websocket:
     allowed-origins: "*"
+
+
+#Observability config
+management:
+    endpoints:
+        web:
+            exposure:
+                include: health,prometheus,metrics,info
+    endpoint:
+        health:
+            show-details: always
+            show-components: always
+    health:
+        rabbit:
+            enabled: true
+    prometheus:
+        metrics:
+            export:
+                enabled: true
