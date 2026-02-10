@@ -3,6 +3,8 @@ package org.binance.livedata.websocket;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -17,10 +19,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class LiveDataSocketHandler implements WebSocketHandler {
 
     private final JsonMapper jsonMapper;
+    private final Counter messagesSentCounter;
+
+    public LiveDataSocketHandler(JsonMapper jsonMapper, MeterRegistry meterRegistry) {
+        this.jsonMapper = jsonMapper;
+        this.messagesSentCounter = Counter.builder("live.messages.broadcast")
+                .description("Total messages broadcast to WebSocket clients")
+                .register(meterRegistry);
+    }
 
     @Getter
     Map<String, Set<WebSocketSession>> sessionsBySymbol = new ConcurrentHashMap<>();
@@ -93,6 +102,7 @@ public class LiveDataSocketHandler implements WebSocketHandler {
             try {
                 if (session.isOpen()) {
                     session.sendMessage(new TextMessage(message));
+                    messagesSentCounter.increment();
                 }
             } catch (Exception e) {
                 log.error("Error sending message to session {}: {}", session.getId(), e.getMessage());
