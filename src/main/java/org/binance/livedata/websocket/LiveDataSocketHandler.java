@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import jakarta.annotation.Nullable;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -21,6 +22,7 @@ public class LiveDataSocketHandler implements WebSocketHandler {
 
     private final JsonMapper jsonMapper;
 
+    @Getter
     Map<String, Set<WebSocketSession>> sessionsBySymbol = new ConcurrentHashMap<>();
 
     private String extractSymbolFromUri(@Nullable URI uri) {
