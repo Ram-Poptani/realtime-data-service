@@ -109,4 +109,22 @@ public class LiveDataSocketHandler implements WebSocketHandler {
             }
         }
     }
+
+    public void broadcastToSymbol(String symbol, String json) {
+        Set<WebSocketSession> sessions = sessionsBySymbol.get(symbol);
+        if (sessions == null || sessions.isEmpty()) {
+            return;
+        }
+        TextMessage message = new TextMessage(json);
+        for (WebSocketSession session : sessions) {
+            try {
+                if (session.isOpen()) {
+                    session.sendMessage(message);
+                    messagesSentCounter.increment();
+                }
+            } catch (Exception e) {
+                log.error("Error sending message to session {}: {}", session.getId(), e.getMessage());
+            }
+        }
+    }
 }
