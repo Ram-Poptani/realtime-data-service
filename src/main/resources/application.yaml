@@ -43,3 +43,7 @@ management:
         metrics:
             export:
                 enabled: true
+
+live:
+    aggregation:
+        interval-ms: 500
