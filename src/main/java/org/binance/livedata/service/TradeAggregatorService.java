@@ -1,20 +1,27 @@
 package org.binance.livedata.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-import lombok.extern.slf4j.Slf4j;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+
 import org.binance.livedata.model.LiveCandle;
 import org.binance.livedata.websocket.LiveDataSocketHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.Map;
-import java.util.concurrent.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Slf4j
@@ -23,7 +30,11 @@ public class TradeAggregatorService {
     private final JsonMapper jsonMapper;
     private final ObjectMapper objectMapper;
     private final LiveDataSocketHandler socketHandler;
+
+//    Metrics
     private final Counter candlesBroadcastCounter;
+    private final Timer broadCastTimer;
+
 
     @Value("${live.aggregation.interval-ms:1000}")
     private long intervalMs;
@@ -43,6 +54,13 @@ public class TradeAggregatorService {
         this.candlesBroadcastCounter = Counter.builder("live.candles.broadcast")
                 .description("Total aggregated candles broadcast to clients")
                 .register(meterRegistry);
+        Gauge.builder("live.symbols.tracked", candles, Map::size)
+                .description("Number of symbols currently being aggregated")
+                .register(meterRegistry);
+        broadCastTimer = Timer.builder("live.candle.broadcast.duration")
+                .description("Total duration of candles broadcast to clients")
+                .register(meterRegistry);
+
     }
 
     @PostConstruct
@@ -95,23 +113,29 @@ public class TradeAggregatorService {
     }
 
     private void broadcastAllCandles() {
-        for (Map.Entry<String, LiveCandle> entry : candles.entrySet()) {
-            LiveCandle candle = entry.getValue();
+        try {
+            broadCastTimer.record(() -> {
+                for (Map.Entry<String, LiveCandle> entry : candles.entrySet()) {
+                    LiveCandle candle = entry.getValue();
 
-            if (candle.getTradeCount() == 0) {
-                continue;
-            }
+                    if (candle.getTradeCount() == 0) {
+                        continue;
+                    }
 
-            LiveCandle snapshot = candle.snapshot();
-            candle.reset();
+                    LiveCandle snapshot = candle.snapshot();
+                    candle.reset();
 
-            try {
-                String json = objectMapper.writeValueAsString(snapshot);
-                socketHandler.broadcastToSymbol(snapshot.getSymbol(), json);
-                candlesBroadcastCounter.increment();
-            } catch (JsonProcessingException e) {
-                log.error("Failed to serialize candle for {}", snapshot.getSymbol(), e);
-            }
+                    try {
+                        String json = objectMapper.writeValueAsString(snapshot);
+                        socketHandler.broadcastToSymbol(snapshot.getSymbol(), json);
+                        candlesBroadcastCounter.increment();
+                    } catch (JsonProcessingException e) {
+                        log.error("Failed to serialize candle for {}", snapshot.getSymbol(), e);
+                    }
+                }
+            });
+        } catch (Exception e) {
+            log.error("Unexpected error during candle broadcast", e);
         }
     }
 }
